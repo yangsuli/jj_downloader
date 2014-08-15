@@ -5,6 +5,7 @@ from mechanize import Browser
 import re
 from BeautifulSoup import BeautifulSoup
 from subprocess import call
+import sys
 
 
 
@@ -105,9 +106,9 @@ def get_chapter(chapter_url, out_fp):
 			out_fp.write(''.join(c for c in line if u'\u4e00' <= c <= u'u9fff'))
 
 
-
-		
-urls = get_chapter_urls(912073)
+novel_id_str = raw_input("what is the novelid you want to download?")
+novel_id = int(novel_id_str)
+urls = get_chapter_urls(novel_id)
 text_file = open("output.txt", "w")
 for url in urls:
 	if "vip" not in url:
