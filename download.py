@@ -1,36 +1,20 @@
 # -*- coding: utf-8 -*-
 
-
-from mechanize import Browser
-import re
+import requests
+import browsercookie
 from BeautifulSoup import BeautifulSoup
-from subprocess import call
-import sys
-
-
-
-def ungzipResponse(r,b):
-    headers = r.info()
-    if headers['Content-Encoding']=='gzip':
-        import gzip
-        gz = gzip.GzipFile(fileobj=r, mode='rb')
-        html = gz.read()
-        gz.close()
-        headers["Content-type"] = "text/html; charset=utf-8"
-        r.set_data( html )
-        b.set_response(r)
+import re
+import gzip
 
 def remove_tags(text):
 	return ''.join( BeautifulSoup(text).findAll( text = True )) 
 
 def get_chapter_urls(novelid):
 	urls = []
-	br = Browser()
 	link = "http://www.jjwxc.net/onebook.php?novelid=" + str(novelid)
-	br.open(link)
-	response = br.response()
-	ungzipResponse(response, br)
-	html = response.read()
+	response = requests.get(link)
+	response.encode = 'gb18030'
+	html = response.text
 	html = html.replace('div', '\n')
 	lines = html.split('\n')
 	for line in lines:
@@ -51,18 +35,14 @@ def get_chapter_urls(novelid):
 	return urls
 
 
-def get_chapter(chapter_url, out_fp):
-	br = Browser()
-	br.open(chapter_url)
-	response = br.response()
-	ungzipResponse(response, br)
-	html = response.read()
-	html = html.decode('gb18030','ignore')
+def get_chapter(chapter_url, cj, out_fp):
+	response = requests.get(chapter_url, cookies=cj)
+	response.encoding = 'gb18030'
+	html = response.text
 	html = remove_tags(html)
 	lines = html.split('\n')
-	chapterid = url.split('=')[1]
+	chapterid = url.split('=')[2]
 
-	#out_fp.write(((u"第 2 章").encode('gb2310'))
 	out_fp.write('Chapter ' + chapterid)
 	out_fp.write('\n\n')
 	for line in lines:
@@ -105,15 +85,14 @@ def get_chapter(chapter_url, out_fp):
 
 			out_fp.write(''.join(c for c in line if u'\u4e00' <= c <= u'u9fff'))
 
-
+cj = browsercookie.chrome()
 novel_id_str = raw_input("what is the novelid you want to download?")
 novel_id = int(novel_id_str)
 urls = get_chapter_urls(novel_id)
 text_file = open("output.txt", "w")
 for url in urls:
-	if "vip" not in url:
-		get_chapter(url, text_file)
+	print "get url:", url
+	get_chapter(url, cj, text_file)
 text_file.close()
-
 
 call(["/Applications/calibre.app/Contents/console.app/Contents/MacOS/ebook-convert", "output.txt", "output.mobi"])
